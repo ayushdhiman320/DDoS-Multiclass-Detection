@@ -1,0 +1,6 @@
+model: catboost
+params:
+  iterations: 500
+  learning_rate: 0.05
+  depth: 8
+  loss_function: MultiClass
