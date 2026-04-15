@@ -75,7 +75,7 @@ def prepare_xy(df: pd.DataFrame, encoder: LabelEncoder | None = None):
     return x, y, encoder
 
 
-def build_base_models(cfg: dict, class_weights: dict[int, float]):
+def build_base_models(cfg: dict, class_weights: dict[int, float], num_classes: int):
     mcfg = cfg["models"]
     models = {}
 
@@ -93,7 +93,7 @@ def build_base_models(cfg: dict, class_weights: dict[int, float]):
         xcfg = mcfg["xgboost"]
         models["xgb"] = xgb.XGBClassifier(
             objective="multi:softprob",
-            num_class=12,
+            num_class=num_classes,
             eval_metric="mlogloss",
             n_estimators=xcfg["n_estimators"],
             max_depth=xcfg["max_depth"],
@@ -243,7 +243,7 @@ def run(config_path: str):
     x_train_bal, y_train_bal = maybe_apply_smote(x_train, y_train, cfg, logger)
 
     best_rf_params = optimize_rf_with_optuna(x_train_bal, y_train_bal, cfg, logger)
-    models = build_base_models(cfg, class_weights)
+    models = build_base_models(cfg, class_weights, num_classes=len(encoder.classes_))
     if best_rf_params:
         models["rf"].set_params(**best_rf_params)
 
