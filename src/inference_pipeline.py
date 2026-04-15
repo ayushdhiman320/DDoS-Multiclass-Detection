@@ -90,11 +90,31 @@ class InferencePipeline:
         return PredictionResult(label=label, confidence=conf, passed_threshold=passed)
 
     def predict_batch(self, df: pd.DataFrame, threshold: float | None = None) -> pd.DataFrame:
+        thr = self.threshold if threshold is None else threshold
+        if len(df) == 0:
+            return pd.DataFrame(columns=["prediction", "confidence", "alert"])
+
+        if self.stage1_model is not None:
+            stage1_pred = self.stage1_model.predict(df)
+            stage1_mask = pd.Series(stage1_pred == 1, index=df.index)
+        else:
+            stage1_mask = pd.Series(True, index=df.index)
+
+        proba = self.multiclass_model.predict_proba(df)
+        idx = proba.argmax(axis=1)
+        conf = proba.max(axis=1)
+        labels = self.label_encoder.inverse_transform(idx)
+
         records = []
-        for i in range(len(df)):
-            result = self.predict(df.iloc[[i]], threshold)
-            records.append({"prediction": result.label, "confidence": result.confidence, "alert": result.passed_threshold})
-        return pd.DataFrame(records)
+        for i, row_id in enumerate(df.index):
+            if not bool(stage1_mask[row_id]):
+                records.append({"prediction": "benign", "confidence": 1.0, "alert": True})
+                continue
+            passed = bool(conf[i] >= thr)
+            if passed:
+                self._emit_alert(str(labels[i]), float(conf[i]))
+            records.append({"prediction": str(labels[i]), "confidence": float(conf[i]), "alert": passed})
+        return pd.DataFrame(records, index=df.index)
 
     def predict_stream(self, batches: Iterable[pd.DataFrame], threshold: float | None = None):
         for batch in batches:

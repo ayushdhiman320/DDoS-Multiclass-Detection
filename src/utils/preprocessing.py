@@ -31,9 +31,13 @@ def normalize_label(value: object) -> str:
 
 
 def cap_class_samples(df: pd.DataFrame, label_col: str, max_samples: int, random_state: int) -> pd.DataFrame:
+    def _sample_group(group: pd.DataFrame) -> pd.DataFrame:
+        sample_size = min(len(group), max_samples)
+        return group.sample(n=sample_size, random_state=random_state)
+
     return (
         df.groupby(label_col, group_keys=False)
-        .apply(lambda x: x.sample(n=min(len(x), max_samples), random_state=random_state))
+        .apply(_sample_group)
         .reset_index(drop=True)
     )
 

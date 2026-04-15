@@ -144,8 +144,9 @@ def run(config_path: str):
 
     if shap is not None:
         try:
-            explainer = shap.Explainer(model.predict_proba, x_test.sample(min(1000, len(x_test)), random_state=42))
-            shap_values = explainer(x_test.sample(min(300, len(x_test)), random_state=42))
+            shap_sample = x_test.sample(min(300, len(x_test)), random_state=42)
+            explainer = shap.Explainer(model.predict_proba, shap_sample)
+            shap_values = explainer(shap_sample)
             plt.figure()
             shap.summary_plot(shap_values, show=False)
             plt.tight_layout()
